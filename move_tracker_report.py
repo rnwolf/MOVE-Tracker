@@ -218,44 +218,47 @@ def _read_excel_data(excel_path: str) -> tuple[MOVEConfiguration, pd.DataFrame, 
 def _generate_full_progress_log(move_config: MOVEConfiguration, df_current: pd.DataFrame, historic_50th_percentile_flow_time: float, snapshot_date_str: str) -> pd.DataFrame:
     """Generates the historical Progress_Log from start date to snapshot date."""
     try:
-        snapshot_date = pd.to_datetime(snapshot_date_str).date()
-        if snapshot_date < move_config.planned_start_date:
+        # Work with Timestamps for consistency
+        snapshot_ts = pd.to_datetime(snapshot_date_str)
+        planned_start_ts = pd.to_datetime(move_config.planned_start_date)
+
+        if snapshot_ts < planned_start_ts:
             console.print("[bold red]Error: Snapshot date cannot be before the planned start date.[/bold red]")
             raise typer.Exit(code=1)
     except ValueError:
         console.print(f"[bold red]Error: Invalid snapshot date format '{snapshot_date_str}'. Please use YYYY-MM-DD.[/bold red]")
         raise typer.Exit(code=1)
 
-    logging.info(f"Generating progress log from {move_config.planned_start_date} to {snapshot_date}")
+    logging.info(f"Generating progress log from {planned_start_ts.date()} to {snapshot_ts.date()}")
 
-    # Create a date range for the log
-    all_dates = pd.date_range(start=move_config.planned_start_date, end=snapshot_date, freq='D')
+    # Create a date range for the log - this is already Timestamps
+    all_dates = pd.date_range(start=planned_start_ts, end=snapshot_ts, freq='D')
+
+    # Convert config dates to Timestamps for comparison
+    planned_delivery_ts = pd.to_datetime(move_config.planned_delivery_date)
+    buffer_red_ts = pd.to_datetime(move_config.buffer_red_date)
 
     progress_log_entries = []
 
-    for current_date in all_dates:
+    for current_ts in all_dates: # current_ts is a Timestamp
         log_entry = {}
-        current_date = current_date.date()
 
-        # Filter data up to the current date in the loop
-        df_current_snapshot = df_current.copy()
-
-        # Calculate Scope_At_Snapshot
-        scope_mask = (df_current_snapshot['Actual_Start_Date'].dt.date <= current_date) & \
-                     ((df_current_snapshot['Date_Withdrawn'].isnull()) | (df_current_snapshot['Date_Withdrawn'].dt.date > current_date))
+        # Calculate Scope_At_Snapshot (compare datetime64[ns] with Timestamp)
+        scope_mask = (df_current['Actual_Start_Date'] <= current_ts) & \
+                     ((df_current['Date_Withdrawn'].isnull()) | (df_current['Date_Withdrawn'] > current_ts))
         scope_at_snapshot = scope_mask.sum()
 
         # Calculate Actual_Work_Completed
-        completed_mask = (df_current_snapshot['Status'] == "Completed") & \
-                         (df_current_snapshot['Actual_Completion_Date'].dt.date <= current_date)
+        completed_mask = (df_current['Status'] == "Completed") & \
+                         (df_current['Actual_Completion_Date'] <= current_ts)
         actual_work_completed = completed_mask.sum()
 
         # Other calculations
-        elapsed_time_days = (current_date - move_config.planned_start_date).days + 1
+        elapsed_time_days = (current_ts - planned_start_ts).days + 1
         actual_operational_throughput = actual_work_completed / elapsed_time_days if elapsed_time_days > 0 else 0
 
         # Current 50th Percentile Flow Time
-        df_completed_current = df_current_snapshot[completed_mask]
+        df_completed_current = df_current[completed_mask]
         if len(df_completed_current) >= 2:
             flow_times = (df_completed_current['Actual_Completion_Date'] - df_completed_current['Actual_Start_Date']).dt.days + 1
             current_50th_percentile_flow_time = np.percentile(flow_times.dropna(), 50)
@@ -266,14 +269,15 @@ def _generate_full_progress_log(move_config: MOVEConfiguration, df_current: pd.D
         remaining_work = scope_at_snapshot - actual_work_completed
         if actual_operational_throughput > 0:
             days_to_complete = remaining_work / actual_operational_throughput
-            forecasted_delivery_date = current_date + pd.to_timedelta(days_to_complete, unit='d')
+            forecasted_delivery_date = current_ts + pd.to_timedelta(days_to_complete, unit='d') # result is Timestamp
         else:
             forecasted_delivery_date = pd.NaT
 
         # Buffer Consumption
         if pd.notna(forecasted_delivery_date):
-            buffer_delta = (move_config.buffer_red_date - move_config.planned_delivery_date).days
-            forecast_delta = (forecasted_delivery_date.date() - move_config.planned_delivery_date).days
+            # Compare Timestamps
+            buffer_delta = (buffer_red_ts - planned_delivery_ts).days
+            forecast_delta = (forecasted_delivery_date - planned_delivery_ts).days
             buffer_consumption_percentage = forecast_delta / buffer_delta if buffer_delta > 0 else 0
         else:
             buffer_consumption_percentage = 0
@@ -282,9 +286,9 @@ def _generate_full_progress_log(move_config: MOVEConfiguration, df_current: pd.D
         # Work Done Percentage
         work_done_percentage = actual_work_completed / scope_at_snapshot if scope_at_snapshot > 0 else 0
 
-        # Current Buffer Signal
+        # Current Buffer Signal - Here we need to compare dates, not timestamps
         if pd.notna(forecasted_delivery_date):
-            fdd = forecasted_delivery_date.date()
+            fdd = forecasted_delivery_date.date() # Convert to date for comparison with config dates
             if fdd <= move_config.buffer_green_date:
                 current_buffer_signal = BufferSignal.GREEN.value
             elif fdd <= move_config.buffer_yellow_date:
@@ -296,7 +300,7 @@ def _generate_full_progress_log(move_config: MOVEConfiguration, df_current: pd.D
         else:
             current_buffer_signal = BufferSignal.GREEN.value # Default if no forecast
 
-        log_entry['Snapshot_Date'] = current_date
+        log_entry['Snapshot_Date'] = current_ts # Store the Timestamp
         log_entry['Scope_At_Snapshot'] = scope_at_snapshot
         log_entry['Actual_Work_Completed'] = actual_work_completed
         log_entry['Elapsed_Time_Days'] = elapsed_time_days
@@ -314,6 +318,7 @@ def _generate_full_progress_log(move_config: MOVEConfiguration, df_current: pd.D
         return pd.DataFrame()
 
     df_progress_log = pd.DataFrame(progress_log_entries)
+    # The 'Snapshot_Date' column is already datetime64[ns], so this conversion is not strictly needed but harmless.
     df_progress_log['Snapshot_Date'] = pd.to_datetime(df_progress_log['Snapshot_Date'])
 
     console.print("[bold green]Successfully generated the full progress log.[/bold green]")
