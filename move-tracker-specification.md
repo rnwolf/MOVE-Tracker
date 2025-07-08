@@ -3,7 +3,7 @@
 ## 1\. Script Name & Purpose
 
   * **Name:** `move_tracker_report.py`
-  * **Purpose:** To automate the process of generating MOVE (Minimal Outcome-Value Effort) project progress reports. It will read project data and configurations from a structured Excel workbook, compute the `Progress_Log` for a specified snapshot date, generate Work Execution and Fever Charts (as SVG images for testability), and insert these updated data and charts back into the Excel workbook. It also provides functionality to generate a template Excel file for new users.
+  * **Purpose:** To automate the process of generating MOVE (Minimal Outcome-Value Effort) project progress reports. It will read project data and configurations from a structured Excel workbook, compute the `Progress_Log` for a specified snapshot date, generate Work Execution and Fever Charts (as PNG images for Excel compatibility), and insert these updated data and charts back into the Excel workbook. It also provides functionality to generate a template Excel file for new users.
 
 -----
 
@@ -207,7 +207,7 @@ The script will modify the *same* Excel workbook provided via `--excel-path`.
           * Write the **full, newly generated `Progress_Log` DataFrame** (from `_generate_full_progress_log`) back to the sheet.
           * Save the workbook.
 
-7.  **Generate Charts (Matplotlib, SVG Output):**
+7.  **Generate Charts (Matplotlib, PNG Output):**
 
       * If `--no-chart-insertion` is not set:
           * Implement `_generate_charts` function.
@@ -222,7 +222,7 @@ The script will modify the *same* Excel workbook provided via `--excel-path`.
               * **Visual Intersection Indicator:** Clearly mark the intersection point of the **projected linear trendline** and the **extended last known `Scope_At_Snapshot` line**. Annotate this point with the `Forecasted_Delivery_Date` from the `--snapshot-date`'s `Progress_Log` entry.
               * Set X-axis range from `Planned_Start_Date` to `Beyond_Red_Date` (from calculated buffer dates).
               * Set Y-axis range from 0 to slightly above the maximum `Scope_At_Snapshot` **observed within the entire `Progress_Log` data** (i.e., up to `snapshot_date`).
-              * Save the chart as `YYYY-MM-DD_work_execution_chart.svg` (where `YYYY-MM-DD` is the `--snapshot-date`).
+              * Save the chart as `YYYY-MM-DD_work_execution_chart.png` (where `YYYY-MM-DD` is the `--snapshot-date`).
           * **Fever Chart:**
               * **Title:** "Fever Chart as at {snapshot\_date}"
               * Plot all `Work_Done_Percentage` vs. `Buffer_Consumption_Percentage` from the `Progress_Log` DataFrame (line with markers). This shows the historical path on the fever chart.
@@ -230,7 +230,7 @@ The script will modify the *same* Excel workbook provided via `--excel-path`.
               * **Highlight Current Point:** Add a distinct, larger marker or annotation for the data point corresponding to the `--snapshot-date` on the Fever Chart.
               * Set X-axis range from 0% to 100% (`Work_Done_Percentage`).
               * Set Y-axis range from 0% to a reasonable maximum (e.g., `max(1.0, progress_log_df['Buffer_Consumption_Percentage'].max() * 1.2)`).
-              * Save the chart as `YYYY-MM-DD_fever_chart.svg` (where `YYYY-MM-DD` is the `--snapshot-date`).
+              * Save the chart as `YYYY-MM-DD_fever_chart.png` (where `YYYY-MM-DD` is the `--snapshot-date`).
 
 8.  **Insert Charts into Excel:**
 
@@ -241,7 +241,7 @@ The script will modify the *same* Excel workbook provided via `--excel-path`.
           * For `Fever_Chart` sheet, clear existing images and insert the generated SVG.
           * Save the workbook.
 
-9.  **Cleanup:** Remove temporary chart SVG files (`.svg`).
+9.  **Cleanup:** Remove temporary chart PNG files (`.png`).
 
 -----
 

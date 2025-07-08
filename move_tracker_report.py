@@ -414,7 +414,7 @@ def _generate_charts(df_progress_log: pd.DataFrame, move_config: MOVEConfigurati
     ax_we.legend()
     ax_we.grid(True)
     plt.tight_layout()
-    work_execution_chart_path = f"{snapshot_date_str}_work_execution_chart.svg"
+    work_execution_chart_path = f"{snapshot_date_str}_work_execution_chart.png"
     fig_we.savefig(work_execution_chart_path)
     plt.close(fig_we)
     console.print(f"[green]Work Execution Chart saved to {work_execution_chart_path}[/green]")
@@ -441,7 +441,7 @@ def _generate_charts(df_progress_log: pd.DataFrame, move_config: MOVEConfigurati
     ax_fever.legend()
     ax_fever.grid(True)
     plt.tight_layout()
-    fever_chart_path = f"{snapshot_date_str}_fever_chart.svg"
+    fever_chart_path = f"{snapshot_date_str}_fever_chart.png"
     fig_fever.savefig(fever_chart_path)
     plt.close(fig_fever)
     console.print(f"[green]Fever Chart saved to {fever_chart_path}[/green]")
