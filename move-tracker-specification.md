@@ -177,7 +177,7 @@ The script will modify the *same* Excel workbook provided via `--excel-path`.
           * If `Historic_50th_Percentile_Flow_Time_Override` is provided, use it.
           * Otherwise, calculate the 50th percentile (median) of `Flow_Time_Days` from `Historic_Work_Items`. Log the calculated value.
       * **Calculate buffer dates/boundaries for Work Execution Chart:**
-          * `Initial_Scope` (at `Planned_Start_Date`) should be derived from `Current_Work_Items` (count items where `Actual_Start_Date` \<= `Planned_Start_Date` AND (`Date_Withdrawn` is NULL or `Date_Withdrawn` \> `Planned_Start_Date`)).
+          * `Initial_Scope` (at `Planned_Start_Date`) should be derived from `Current_Work_Items` (count items where `Actual_Start_Date` \<= `Planned_Start_Date`).
           * `Initial_Ideal_Completion_Flow_Time = Initial_Scope * Historic_50th_Percentile_Flow_Time`
           * `Green_Buffer_Start_Date = Planned_Start_Date + Initial_Ideal_Completion_Flow_Time`
           * `Yellow_Buffer_Start_Date = Green_Buffer_Start_Date + (20% * Initial_Ideal_Completion_Flow_Time)`

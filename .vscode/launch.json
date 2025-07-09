@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run MOVE Tracker Report",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/move_tracker_report.py",
+      "args": [
+        "--excel-path",
+        ".\\MyProjectTemplate.xlsx",
+        "--snapshot-date",
+        "2025-08-01",
+        "--log-level",
+        "INFO"
+      ],
+      "console": "integratedTerminal"
+    }
+  ]
+}
