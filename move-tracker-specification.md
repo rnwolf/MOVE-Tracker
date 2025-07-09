@@ -217,7 +217,7 @@ The script will modify the *same* Excel workbook provided via `--excel-path`.
               * Plot all `Actual_Work_Completed` vs. `Snapshot_Date` from the `Progress_Log` DataFrame (line with markers).
               * Plot all `Scope_At_Snapshot` vs. `Snapshot_Date` from the `Progress_Log` DataFrame (line, as it can change over time).
               * Plot a **linear trendline** for `Actual_Work_Completed` from the full `Progress_Log` data, projecting forward from the *last `Snapshot_Date` in the log* (which is the `--snapshot-date` from CLI).
-              * **Extend the `Scope_At_Snapshot` line:** The `Scope_At_Snapshot` value corresponding to the *last `Snapshot_Date` in the `Progress_Log`* (i.e., the `--snapshot-date` from CLI) should be extended as a horizontal dashed line from that date to the end of the chart's X-axis range.
+              * **Extend the `Scope_At_Snapshot` line:** The `Scope_At_Snapshot` value corresponding to the *last `Snapshot_Date` in the `Progress_Log`* (i.e., the `--snapshot_date` from CLI) should be extended as a horizontal dashed line from that date to the end of the chart's X-axis range.
               * Add **vertical lines** at `Planned_Delivery_Date`, `Green_Buffer_Start_Date`, `Yellow_Buffer_Start_Date`, `Red_Buffer_Start_Date`, using the dynamically calculated buffer dates.
               * **Visual Intersection Indicator:** Clearly mark the intersection point of the **projected linear trendline** and the **extended last known `Scope_At_Snapshot` line**. Annotate this point with the `Forecasted_Delivery_Date` from the `--snapshot-date`'s `Progress_Log` entry.
               * Set X-axis range from `Planned_Start_Date` to `Beyond_Red_Date` (from calculated buffer dates).
@@ -307,3 +307,43 @@ The script will modify the *same* Excel workbook provided via `--excel-path`.
   * Graceful exit on critical errors (e.g., missing Excel file, invalid configuration values, `snapshot-date` before `Planned_Start_Date`).
 
 -----
+
+## 11\. Testing Strategy
+
+To ensure the reliability and correctness of the `move_tracker_report.py` script, an **Integration Testing** approach will be primarily employed. This strategy focuses on verifying the end-to-end functionality of the script, from reading input Excel files to generating the `Progress_Log` and chart outputs.
+
+### 11.1. Test Framework and Organization
+
+*   **Framework:** `pytest` will be used as the testing framework.
+*   **Test Files:** Test cases will be organized within a `tests/` directory. A single test file, `test_excel_integration.py`, will contain multiple test functions, each representing a specific test scenario.
+*   **Execution:** Tests can be run using the `pytest` command. Specific test scenarios can be selected (e.g., `pytest tests/test_excel_integration.py::test_scenario_name`).
+
+### 11.2. Test Workflow
+
+For each integration test scenario, the following workflow will be followed:
+
+1.  **Prepare Input Excel File:**
+    *   A temporary Excel workbook (`.xlsx`) will be programmatically created for each test case using `openpyxl`.
+    *   This input file will contain specific data in the `Historic_Work_Items`, `Current_Work_Items`, and `MOVE_Configuration` sheets, tailored to the scenario being tested.
+    *   These input files serve as "golden" inputs, representing known states.
+
+2.  **Execute `move_tracker_report.py`:**
+    *   The `move_tracker_report.py` script will be executed as a subprocess using `subprocess.run`.
+    *   The `--excel-path` argument will point to the temporary input Excel file.
+    *   A specific `--snapshot-date` will be provided to control the data generation.
+    *   The `--overwrite` flag will be used to bypass any interactive prompts during testing.
+
+3.  **Verify Outputs:**
+    *   **`Progress_Log` Sheet Validation:**
+        *   The `Progress_Log` sheet from the output Excel file (which is the same as the input file, as the script modifies in-place) will be read into a Pandas DataFrame.
+        *   This DataFrame will be compared against a pre-defined "expected" Pandas DataFrame using `pandas.testing.assert_frame_equal`. The expected DataFrame will represent the correct `Progress_Log` output for the given input and snapshot date.
+    *   **Chart File Verification:**
+        *   The existence of the generated PNG chart files (`YYYY-MM-DD_work_execution_chart.png`, `YYYY-MM-DD_fever_chart.png`) will be asserted.
+        *   Their file sizes will be checked to ensure they are not empty.
+    *   **Excel Structure Verification (Optional):** `openpyxl` can be used to verify that the output Excel file contains the expected chart sheets and that images are correctly embedded.
+
+### 11.3. Example Test Scenario
+
+An example test scenario will involve creating a basic Excel input with sample historic, current, and configuration data. The test will then execute the script and verify that the `Progress_Log` sheet matches a predefined expected dataset and that the chart files are generated correctly.
+
+This approach allows for robust testing of the script's core functionality and ensures that changes do not introduce regressions in data processing or output generation.

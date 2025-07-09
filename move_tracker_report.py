@@ -305,10 +305,10 @@ def _read_excel_data(
                     "[bold red]Error: 'MOVE_Configuration' sheet not found in the Excel file.[/bold red]"
                 )
                 raise typer.Exit(code=1)
-            df_config = pd.read_excel(xls, "MOVE_Configuration").set_index("Parameter")[
-                "Value"
-            ]
-
+            df_config = pd.read_excel(
+                xls, "MOVE_Configuration", engine="openpyxl"
+            ).set_index("Parameter")["Value"]
+            print(df_config)
             # --- Parse and validate MOVEConfiguration ---
             config_dict = {}
             required_params = [
