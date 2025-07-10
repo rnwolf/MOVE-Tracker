@@ -35,7 +35,7 @@ def create_test_excel_input(tmp_path):
     historic_50th_percentile_flow_time = 4.0
 
     # Initial_Scope (WI-001 starts on planned_start_date, others later)
-    initial_scope = 1
+    initial_scope = 4
 
     # Initial_Ideal_Completion_Flow_Time
     initial_ideal_completion_flow_time = (
@@ -182,9 +182,10 @@ def test_progress_log_generation_basic(create_test_excel_input, tmp_path):
     Tests if the Progress_Log sheet is correctly generated for a basic scenario.
     """
     input_excel_path, planned_start_date_fixture = create_test_excel_input
-    snapshot_date = planned_start_date_fixture + timedelta(
-        days=15
-    )  # Example snapshot date
+    # snapshot_date = planned_start_date_fixture + timedelta(
+    #     days=15
+    # )  # Example snapshot date
+    snapshot_date = date(2025, 1, 10)
     snapshot_date_str = snapshot_date.strftime("%Y-%m-%d")
 
     command = [
@@ -218,7 +219,7 @@ def test_progress_log_generation_basic(create_test_excel_input, tmp_path):
             date(2025, 1, 10),
             date(2025, 1, 15),
         ],
-        "Scope_At_Snapshot": [1, 1, 2, 3],
+        "Scope_At_Snapshot": [4, 4, 4, 4],
         "Actual_Work_Completed": [0, 1, 1, 2],
         "Elapsed_Time_Days": [1, 5, 10, 15],
         "Actual_Operational_Throughput": [

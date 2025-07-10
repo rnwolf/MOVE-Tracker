@@ -127,7 +127,10 @@ The script will modify the *same* Excel workbook provided via `--excel-path`.
       * `Elapsed_Time_Days` (Number): Days since `Planned_Start_Date` to `Snapshot_Date`.
       * `Actual_Operational_Throughput` (Number): `Actual_Work_Completed` / `Elapsed_Time_Days`.
       * `Current_50th_Percentile_Flow_Time` (Number): Calculated 50th percentile flow time based on **completed work items up to `Snapshot_Date`** from `Current_Work_Items`. If insufficient completed data, use `Historic_50th_Percentile_Flow_Time` or a default.
-      * `Forecasted_Delivery_Date` (Datetime): `Snapshot_Date` + (`Remaining_Work` / `Actual_Operational_Throughput`). `Remaining_Work` is `Scope_At_Snapshot` - `Actual_Work_Completed`.
+      * `Forecasted_Delivery_Date` (Datetime): Calculated using linear regression on the historical `Actual_Work_Completed` data points. The regression line is projected to intersect with the `Scope_At_Snapshot` line.
+          * **Data for Regression:** Pairs of (`Elapsed_Time_Days`, `Actual_Work_Completed`) from the `Progress_Log` up to the current `Snapshot_Date`.
+          * **Method:** A linear regression model will be fitted to these data points. The `Forecasted_Delivery_Date` is the date corresponding to the point where the regression line reaches the `Scope_At_Snapshot` value.
+          * **Handling Edge Cases:** If there are insufficient data points for regression (e.g., less than 2 completed items) or if the calculated velocity (slope) is non-positive, a fallback mechanism will be used (e.g., `Planned_Delivery_Date` or a default far-future date).
       * `Buffer_Consumption_Percentage` (Float, 0.0 to 1.0+): Percentage of buffer consumed. Calculated as `(Forecasted_Delivery_Date - Planned_Delivery_Date) / (Buffer_Red_Date - Planned_Delivery_Date)`. Capped at 0 if ahead of schedule.
       * `Work_Done_Percentage` (Float, 0.0 to 1.0): `Actual_Work_Completed` / `Scope_At_Snapshot`.
       * `Current_Buffer_Signal` (String): "Green", "Yellow", "Red", "Beyond Red" based on `Forecasted_Delivery_Date` relative to buffer dates.

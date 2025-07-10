@@ -8,7 +8,8 @@
 #     "openpyxl>=3.0",
 #     "rich>=12.0",
 #     "typer>=0.9.0",
-#     "python-dateutil>=2.8.2"
+#     "python-dateutil>=2.8.2",
+#     "scikit-learn>=1.7.0",
 # ]
 # ///
 
@@ -18,6 +19,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from enum import Enum
 from typing import Optional
+from sklearn.linear_model import LinearRegression
 
 import typer
 from rich.console import Console
@@ -450,8 +452,34 @@ def _generate_full_progress_log(
         f"Generating progress log from {planned_start_ts.date()} to {snapshot_ts.date()}"
     )
 
-    # Create a date range for the log - this is already Timestamps
-    all_dates = pd.date_range(start=planned_start_ts, end=snapshot_ts, freq="D")
+    # Identify all relevant "event dates" from Current_Work_Items
+    event_dates = set()
+    event_dates.add(planned_start_ts.date())  # Add planned start date
+    event_dates.add(snapshot_ts.date())  # Add snapshot date
+
+    # Add all unique dates from Current_Work_Items that are relevant
+    for col in [
+        "Commitment_Date",
+        "Actual_Start_Date",
+        "Actual_Completion_Date",
+        "Date_Withdrawn",
+    ]:
+        if col in df_current.columns:
+            # Filter out NaT (Not a Time) values before adding to set
+            valid_dates = (
+                df_current[col].dropna().apply(lambda x: pd.to_datetime(x).date())
+            )
+            event_dates.update(valid_dates)
+
+    # Filter dates to be within the planned_start_ts and snapshot_ts range
+    # and convert to Timestamps for consistency with existing logic
+    all_dates = sorted(
+        [
+            pd.Timestamp(d)
+            for d in event_dates
+            if planned_start_ts.date() <= d <= snapshot_ts.date()
+        ]
+    )
 
     # Convert config dates to Timestamps for comparison
     planned_delivery_ts = pd.to_datetime(move_config.planned_delivery_date)
@@ -463,7 +491,7 @@ def _generate_full_progress_log(
         log_entry = {}
 
         # Calculate Scope_At_Snapshot (compare datetime64[ns] with Timestamp)
-        scope_mask = (df_current["Actual_Start_Date"] <= current_ts) & (
+        scope_mask = (df_current["Commitment_Date"] <= current_ts) & (
             (df_current["Date_Withdrawn"].isnull())
             | (df_current["Date_Withdrawn"] > current_ts)
         )
@@ -492,15 +520,61 @@ def _generate_full_progress_log(
         else:
             current_50th_percentile_flow_time = historic_50th_percentile_flow_time
 
-        # Forecasted Delivery Date
-        remaining_work = scope_at_snapshot - actual_work_completed
-        if actual_operational_throughput > 0:
-            days_to_complete = remaining_work / actual_operational_throughput
-            forecasted_delivery_date = current_ts + pd.to_timedelta(
-                days_to_complete, unit="d"
-            )  # result is Timestamp
+        # Collect historical data points for regression up to current_ts
+        # Filter progress_log_entries to only include entries up to current_ts
+        historical_progress_data = [
+            entry
+            for entry in progress_log_entries
+            if pd.Timestamp(entry["Snapshot_Date"]) <= current_ts
+        ]
+
+        # Add the current_ts data point if it's not already there (it will be the last one)
+        # This ensures we have the most up-to-date actual_work_completed for the current_ts
+        # We need to ensure that the current_ts data point is included in the regression
+        # even if it's the first entry or if there are no prior entries.
+        # For the regression, we need (elapsed_time_days, actual_work_completed)
+
+        # Create a list of (elapsed_time_days, actual_work_completed) for regression
+        regression_data = []
+        # Add previous entries
+        for entry in historical_progress_data:
+            regression_data.append(
+                (entry["Elapsed_Time_Days"], entry["Actual_Work_Completed"])
+            )
+        # Add current entry
+        regression_data.append((elapsed_time_days, actual_work_completed))
+
+        # Ensure unique elapsed_time_days for regression
+        # If multiple entries have the same elapsed_time_days, take the last one (most recent)
+        unique_regression_data = {}
+        for days, completed in regression_data:
+            unique_regression_data[days] = completed
+
+        sorted_regression_data = sorted(unique_regression_data.items())
+
+        X = np.array([item[0] for item in sorted_regression_data]).reshape(-1, 1)
+        y = np.array([item[1] for item in sorted_regression_data])
+
+        # Forecasted Delivery Date using Linear Regression
+        if len(X) >= 2:  # Need at least 2 data points for linear regression
+            model = LinearRegression()
+            model.fit(X, y)
+            slope = model.coef_[0]
+            intercept = model.intercept_
+
+            if slope > 0:
+                # Solve: slope * x + intercept = scope_at_snapshot
+                # x = (scope_at_snapshot - intercept) / slope
+                days_to_reach_scope = (scope_at_snapshot - intercept) / slope
+                forecasted_delivery_date = planned_start_ts + pd.to_timedelta(
+                    days_to_reach_scope, unit="D"
+                )
+            else:
+                forecasted_delivery_date = (
+                    pd.NaT
+                )  # Cannot forecast with non-positive slope
         else:
-            forecasted_delivery_date = pd.NaT
+            forecasted_delivery_date = pd.NaT  # Not enough data for regression
 
         # Buffer Consumption
         if pd.notna(forecasted_delivery_date):
