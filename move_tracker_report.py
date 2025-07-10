@@ -277,7 +277,7 @@ def _create_excel_template(excel_path: str, overwrite: bool):
             "Forecasted_Delivery_Date",
             "Buffer_Consumption_Percentage",
             "Work_Done_Percentage",
-            "Current_Buffer_Signal",
+            "Fever_chart_signal",
         ]
         ws_progress.append(progress_headers)
 
@@ -602,23 +602,27 @@ def _generate_full_progress_log(
             actual_work_completed / scope_at_snapshot if scope_at_snapshot > 0 else 0
         )
 
-        # Current Buffer Signal - Here we need to compare dates, not timestamps
+        # Fever Chart Signal
         if pd.notna(forecasted_delivery_date):
-            fdd = (
-                forecasted_delivery_date.date()
-            )  # Convert to date for comparison with config dates
-            if fdd <= move_config.buffer_green_date:
-                current_buffer_signal = BufferSignal.GREEN.value
-            elif fdd <= move_config.buffer_yellow_date:
-                current_buffer_signal = BufferSignal.YELLOW.value
-            elif fdd <= move_config.buffer_red_date:
-                current_buffer_signal = BufferSignal.RED.value
-            else:
-                current_buffer_signal = BufferSignal.BEYOND_RED.value
-        else:
-            current_buffer_signal = BufferSignal.GREEN.value  # Default if no forecast
+            # Calculate Y-coordinates of the boundaries at the current Work_Done_Percentage
+            y_green_yellow_boundary = move_config.fever_green_yellow_left_y + \
+                                      (move_config.fever_green_yellow_right_y - move_config.fever_green_yellow_left_y) * work_done_percentage
 
-        log_entry["Snapshot_Date"] = current_ts  # Store the Timestamp
+            y_yellow_red_boundary = move_config.fever_yellow_red_left_y + \
+                                    (move_config.fever_yellow_red_right_y - move_config.fever_yellow_red_left_y) * work_done_percentage
+
+            if buffer_consumption_percentage <= y_green_yellow_boundary:
+                fever_chart_signal = BufferSignal.GREEN.value
+            elif buffer_consumption_percentage <= y_yellow_red_boundary:
+                fever_chart_signal = BufferSignal.YELLOW.value
+            elif buffer_consumption_percentage <= 1.0: # Within the red zone but not beyond 100% buffer
+                fever_chart_signal = BufferSignal.RED.value
+            else: # Beyond 100% buffer consumption
+                fever_chart_signal = BufferSignal.BEYOND_RED.value
+        else:
+            fever_chart_signal = BufferSignal.GREEN.value # Default if no forecast
+
+        log_entry["Snapshot_Date"] = current_ts.date()  # Store as datetime.date
         log_entry["Scope_At_Snapshot"] = scope_at_snapshot
         log_entry["Actual_Work_Completed"] = actual_work_completed
         log_entry["Elapsed_Time_Days"] = elapsed_time_days
@@ -629,7 +633,7 @@ def _generate_full_progress_log(
         log_entry["Forecasted_Delivery_Date"] = forecasted_delivery_date
         log_entry["Buffer_Consumption_Percentage"] = buffer_consumption_percentage
         log_entry["Work_Done_Percentage"] = work_done_percentage
-        log_entry["Current_Buffer_Signal"] = current_buffer_signal
+        log_entry["Fever_chart_signal"] = fever_chart_signal
 
         progress_log_entries.append(log_entry)
 
@@ -864,6 +868,20 @@ def _generate_charts(
         linestyle="-",
         label="Project Path",
     )
+
+    # Annotate each marker with its Snapshot Date
+    for i, row in df_progress_log.iterrows():
+        ax_fever.annotate(
+            row["Snapshot_Date"].strftime("%Y-%m-%d"),
+            (row["Work_Done_Percentage"], row["Buffer_Consumption_Percentage"]),
+            textcoords="offset points",
+            xytext=(5, 5), # Offset text slightly
+            ha='left', # Horizontal alignment
+            va='bottom', # Vertical alignment
+            fontsize=8,
+            bbox=dict(boxstyle="round,pad=0.3", fc="yellow", alpha=0.5), # Optional: background box
+            arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=.2", color='black') # Optional: arrow
+        )
 
     # Highlight current point
     ax_fever.plot(

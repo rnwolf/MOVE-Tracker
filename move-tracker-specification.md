@@ -131,9 +131,9 @@ The script will modify the *same* Excel workbook provided via `--excel-path`.
           * **Data for Regression:** Pairs of (`Elapsed_Time_Days`, `Actual_Work_Completed`) from the `Progress_Log` up to the current `Snapshot_Date`.
           * **Method:** A linear regression model will be fitted to these data points. The `Forecasted_Delivery_Date` is the date corresponding to the point where the regression line reaches the `Scope_At_Snapshot` value.
           * **Handling Edge Cases:** If there are insufficient data points for regression (e.g., less than 2 completed items) or if the calculated velocity (slope) is non-positive, a fallback mechanism will be used (e.g., `Planned_Delivery_Date` or a default far-future date).
-      * `Buffer_Consumption_Percentage` (Float, 0.0 to 1.0+): Percentage of buffer consumed. Calculated as `(Forecasted_Delivery_Date - Planned_Delivery_Date) / (Buffer_Red_Date - Planned_Delivery_Date)`. Capped at 0 if ahead of schedule.
+      * `Buffer_Consumption_Percentage` (Float, 0.0 to 1.0+): Percentage of buffer consumed. Calculated as `(Forecasted_Delivery_Date - Buffer_Green_Date) / (Buffer_Beyond_Red_Date - Buffer_Green_Date)`. Capped at 0 if ahead of schedule.
       * `Work_Done_Percentage` (Float, 0.0 to 1.0): `Actual_Work_Completed` / `Scope_At_Snapshot`.
-      * `Current_Buffer_Signal` (String): "Green", "Yellow", "Red", "Beyond Red" based on `Forecasted_Delivery_Date` relative to buffer dates.
+      * `Fever_chart_signal` (String): "Green", "Yellow", "Red", "Beyond Red" based on the position of the `(Work_Done_Percentage, Buffer_Consumption_Percentage)` point relative to the defined buffer zones on the Fever Chart. This signal's color aligns with the color of the buffer zones on the Fever Chart, not the Work Execution Chart.
   * **Data Range:** Will start from A1 with headers.
 
 ### Sheets: `Work_Execution_Chart` and `Fever_Chart`
