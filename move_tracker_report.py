@@ -997,6 +997,11 @@ def main(
         "--no-data-update",
         help="If present, the script will generate charts but skip updating the Progress_Log sheet.",
     ),
+    save_charts_only: Optional[str] = typer.Option(
+        None,
+        "--save-charts-only",
+        help="If provided, only generate and save charts to the specified directory without updating Excel.",
+    ),
 ):
     """
     Automates the generation of MOVE (Minimal Outcome-Value Effort) project progress reports.
@@ -1036,6 +1041,22 @@ def main(
     df_progress_log = _generate_full_progress_log(
         move_config, df_current, historic_50th_percentile_flow_time, snapshot_date
     )
+
+    # Handle save-charts-only mode
+    if save_charts_only:
+        logging.info(f"Save charts only mode - saving to directory: {save_charts_only}")
+        chart_paths = _generate_charts(df_progress_log, move_config, snapshot_date)
+        if chart_paths:
+            import shutil
+            import os
+            
+            # Move charts to the specified directory
+            os.makedirs(save_charts_only, exist_ok=True)
+            for chart_path in chart_paths:
+                dest_path = os.path.join(save_charts_only, os.path.basename(chart_path))
+                shutil.move(chart_path, dest_path)
+                console.print(f"[green]Chart saved to: {dest_path}[/green]")
+        return
 
     # 4. Update excel with progress log
     if not no_data_update:

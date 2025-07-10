@@ -66,7 +66,7 @@ def compare_images(img1_path, img2_path, diff_output_path=None, threshold=0.01):
         # ("2025-01-21", "withdrawal_and_scope_change_scenario"),
     ],
 )
-def test_chart_visual_consistency(tmp_path, snapshot_date_str, test_scenario_name, create_test_excel_input):
+def test_chart_visual_consistency(create_test_excel_input, tmp_path, snapshot_date_str, test_scenario_name):
     """
     Tests the visual consistency of generated charts against reference images.
     """
@@ -90,7 +90,7 @@ def test_chart_visual_consistency(tmp_path, snapshot_date_str, test_scenario_nam
         sys.executable,
         SCRIPT_PATH,
         "--excel-path",
-        str(excel_input_path),  # Pass the dummy excel path
+        str(excel_input_path),  # Use the proper test fixture Excel file
         "--snapshot-date",
         snapshot_date_str,
         "--log-level",
