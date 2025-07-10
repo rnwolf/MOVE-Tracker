@@ -51,6 +51,7 @@ class MOVEConfiguration:
     buffer_green_date: date
     buffer_yellow_date: date
     buffer_red_date: date
+    buffer_beyond_red_date: date
     fever_green_yellow_left_y: float
     fever_green_yellow_right_y: float
     fever_yellow_red_left_y: float
@@ -321,6 +322,7 @@ def _read_excel_data(
                 "Buffer_Green_Date",
                 "Buffer_Yellow_Date",
                 "Buffer_Red_Date",
+                "Buffer_Beyond_Red_Date",
                 "Fever_Green_Yellow_Left_Y",
                 "Fever_Green_Yellow_Right_Y",
                 "Fever_Yellow_Red_Left_Y",
@@ -339,6 +341,7 @@ def _read_excel_data(
                 "Buffer_Green_Date",
                 "Buffer_Yellow_Date",
                 "Buffer_Red_Date",
+                "Buffer_Beyond_Red_Date",
             ]
             for param in date_params:
                 config_dict[param.lower()] = pd.to_datetime(df_config[param]).date()
@@ -579,8 +582,12 @@ def _generate_full_progress_log(
         # Buffer Consumption
         if pd.notna(forecasted_delivery_date):
             # Compare Timestamps
-            buffer_delta = (buffer_red_ts - planned_delivery_ts).days
-            forecast_delta = (forecasted_delivery_date - planned_delivery_ts).days
+            # Convert config dates to Timestamps for comparison
+            buffer_green_ts = pd.to_datetime(move_config.buffer_green_date)
+            buffer_beyond_red_ts = pd.to_datetime(move_config.buffer_beyond_red_date)
+
+            buffer_delta = (buffer_beyond_red_ts - buffer_green_ts).days
+            forecast_delta = (forecasted_delivery_date - buffer_green_ts).days
             buffer_consumption_percentage = (
                 forecast_delta / buffer_delta if buffer_delta > 0 else 0
             )
@@ -755,22 +762,44 @@ def _generate_charts(
         x=move_config.planned_delivery_date,
         color="blue",
         linestyle="--",
-        label="Planned Delivery",
+        label=f"Planned Delivery: {move_config.planned_delivery_date.strftime('%Y-%m-%d')}",
     )
+    # ax_we.axvline(
+    #     x=move_config.buffer_green_date,
+    #     color="green",
+    #     linestyle="--",
+    #     label="Green Buffer",
+    # )
+    # ax_we.axvline(
+    #     x=move_config.buffer_yellow_date,
+    #     color="yellow",
+    #     linestyle="--",
+    #     label="Yellow Buffer",
+    # )
+
     ax_we.axvline(
-        x=move_config.buffer_green_date,
+        move_config.buffer_green_date,
         color="green",
         linestyle="--",
-        label="Green Buffer",
+        label=f"Green Buffer Start: {move_config.buffer_green_date.strftime('%Y-%m-%d')}",
     )
     ax_we.axvline(
-        x=move_config.buffer_yellow_date,
-        color="yellow",
+        move_config.buffer_yellow_date,
+        color="orange",
         linestyle="--",
-        label="Yellow Buffer",
+        label=f"Yellow Buffer Start: {move_config.buffer_yellow_date.strftime('%Y-%m-%d')}",
     )
     ax_we.axvline(
-        x=move_config.buffer_red_date, color="red", linestyle="--", label="Red Buffer"
+        move_config.buffer_red_date,
+        color="red",
+        linestyle="--",
+        label=f"Red Buffer Start: {move_config.buffer_red_date.strftime('%Y-%m-%d')}",
+    )
+    ax_we.axvline(
+        move_config.buffer_beyond_red_date,
+        color="darkred",
+        linestyle="--",
+        label=f"Beyond Red Buffer Start: {move_config.buffer_beyond_red_date.strftime('%Y-%m-%d')}",
     )
 
     # Forecast Intersection

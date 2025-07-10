@@ -216,20 +216,26 @@ def test_progress_log_generation_basic(create_test_excel_input, tmp_path):
         "Snapshot_Date": [
             date(2025, 1, 1),
             date(2025, 1, 5),
+            date(2025, 1, 6),
             date(2025, 1, 10),
+            date(2025, 1, 11),
             date(2025, 1, 15),
         ],
-        "Scope_At_Snapshot": [4, 4, 4, 4],
-        "Actual_Work_Completed": [0, 1, 1, 2],
-        "Elapsed_Time_Days": [1, 5, 10, 15],
+        "Scope_At_Snapshot": [4, 4, 4, 4, 4, 4],
+        "Actual_Work_Completed": [0, 1, 1, 2, 2, 2],
+        "Elapsed_Time_Days": [1, 5, 6, 10, 11, 15],
         "Actual_Operational_Throughput": [
             0.0,
             0.2,
-            0.1,
+            0.16666666666666666,
+            0.2,
+            0.18181818181818182,
             0.13333333333333333,
         ],  # Placeholder, needs exact calculation
         "Current_50th_Percentile_Flow_Time": [
-            0.0,
+            4.0,
+            4.0,
+            4.0,
             4.0,
             4.0,
             4.0,
@@ -239,10 +245,33 @@ def test_progress_log_generation_basic(create_test_excel_input, tmp_path):
             date(2025, 3, 31),
             date(2025, 3, 31),
             date(2025, 3, 31),
+            date(2025, 3, 31),
+            date(2025, 3, 31),
         ],  # Placeholder
-        "Buffer_Consumption_Percentage": [0.0, 0.0, 0.0, 0.0],  # Placeholder
-        "Work_Done_Percentage": [0.0, 1.0, 0.5, 0.6666666666666666],  # Placeholder
-        "Current_Buffer_Signal": ["Green", "Green", "Green", "Green"],  # Placeholder
+        "Buffer_Consumption_Percentage": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+        ],  # Placeholder
+        "Work_Done_Percentage": [
+            0.0,
+            0.25,
+            0.25,
+            0.5,
+            0.5,
+            0.5,
+        ],  # Placeholder
+        "Current_Buffer_Signal": [
+            "Green",
+            "Green",
+            "Green",
+            "Green",
+            "Green",
+            "Green",
+        ],  # Placeholder
     }
     expected_df = pd.DataFrame(expected_data)
     expected_df["Snapshot_Date"] = pd.to_datetime(expected_df["Snapshot_Date"]).dt.date
