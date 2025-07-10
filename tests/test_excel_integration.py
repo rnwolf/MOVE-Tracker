@@ -1,5 +1,6 @@
 import pytest
 import pandas as pd
+import numpy as np
 from openpyxl import Workbook, load_workbook
 from openpyxl.drawing.image import Image
 from datetime import date, datetime, timedelta
@@ -8,6 +9,7 @@ import sys
 import subprocess
 import random
 from dateutil.relativedelta import relativedelta
+from matplotlib import pyplot as plt
 
 # Path to the main script (assuming it's in the parent directory)
 SCRIPT_PATH = os.path.abspath(
@@ -26,7 +28,33 @@ def create_test_excel_input(tmp_path):
 
     # --- Fixed dates for reproducible tests ---
     planned_start_date = date(2025, 1, 1)
-    planned_delivery_date = date(2025, 3, 31)
+    planned_delivery_date = date(2025, 2, 1)
+
+    # --- Calculate derived config values in Python ---
+    # Historic_50th_Percentile_Flow_Time (from fixed historic data: 4, 7, 2 -> median is 4)
+    historic_50th_percentile_flow_time = 4.0
+
+    # Initial_Scope (WI-001 starts on planned_start_date, others later)
+    initial_scope = 1
+
+    # Initial_Ideal_Completion_Flow_Time
+    initial_ideal_completion_flow_time = (
+        initial_scope * historic_50th_percentile_flow_time
+    )
+
+    # Buffer Dates (assuming rounding to nearest day for timedelta)
+    green_buffer_date = planned_start_date + timedelta(
+        days=round(initial_ideal_completion_flow_time)
+    )
+    yellow_buffer_date = green_buffer_date + timedelta(
+        days=round(0.2 * initial_ideal_completion_flow_time)
+    )
+    red_buffer_date = yellow_buffer_date + timedelta(
+        days=round(0.2 * initial_ideal_completion_flow_time)
+    )
+    beyond_red_date = red_buffer_date + timedelta(
+        days=round(0.2 * initial_ideal_completion_flow_time)
+    )
 
     # --- MOVE_Configuration Sheet ---
     ws_config = wb.create_sheet("MOVE_Configuration")
@@ -35,20 +63,14 @@ def create_test_excel_input(tmp_path):
     config_data = [
         ("Planned_Start_Date", planned_start_date),
         ("Planned_Delivery_Date", planned_delivery_date),
-        (
-            "Historic_50th_Percentile_Flow_Time",
-            "=_xlfn.PERCENTILE.INC('Historic_Work_Items'!E:E, 0.5)",
-        ),
+        ("Historic_50th_Percentile_Flow_Time", historic_50th_percentile_flow_time),
         ("Historic_50th_Percentile_Flow_Time_Override", ""),
-        (
-            "Initial_Scope",
-            "=SUMPRODUCT( --(Current_Work_Items!C$2:INDEX(Current_Work_Items!C:C, MATCH(1E+100, Current_Work_Items!C:C)) <= $B$2), --((Current_Work_Items!G$2:INDEX(Current_Work_Items!G:G, MATCH(1E+100, Current_Work_Items!C:C)) > $B$2) + ISBLANK(Current_Work_Items!G$2:INDEX(Current_Work_Items!G:G, MATCH(1E+100,Current_Work_Items!C:C)))))",
-        ),
-        ("Initial_Ideal_Completion_Flow_Time", "=B6*B4"),
-        ("Buffer_Green_Date", "=B2+B7"),
-        ("Buffer_Yellow_Date", "=B8+(0.2*B7)"),
-        ("Buffer_Red_Date", "=B9+(0.2*B7)"),
-        ("Buffer_Beyond_Red_Date", "=B10+(0.2*B7)"),
+        ("Initial_Scope", initial_scope),
+        ("Initial_Ideal_Completion_Flow_Time", initial_ideal_completion_flow_time),
+        ("Buffer_Green_Date", green_buffer_date),
+        ("Buffer_Yellow_Date", yellow_buffer_date),
+        ("Buffer_Red_Date", red_buffer_date),
+        ("Buffer_Beyond_Red_Date", beyond_red_date),
         ("Fever_Green_Yellow_Left_Y", 0.2),
         ("Fever_Green_Yellow_Right_Y", 0.5),
         ("Fever_Yellow_Red_Left_Y", 0.5),
@@ -58,19 +80,15 @@ def create_test_excel_input(tmp_path):
     for idx, (param, value) in enumerate(config_data):
         row_num = idx + 2
         ws_config.cell(row=row_num, column=1, value=param)
-        if isinstance(value, str) and value.startswith("="):
-            ws_config.cell(row=row_num, column=2, value=value)
-        else:
-            ws_config.cell(row=row_num, column=2, value=value)
+        ws_config.cell(row=row_num, column=2, value=value)
 
-    # Convert date strings to actual dates
-    ws_config["B2"].number_format = "YYYY-MM-DD"
-    ws_config["B3"].number_format = "YYYY-MM-DD"
-    # Apply date formatting to buffer dates
-    ws_config["B8"].number_format = "YYYY-MM-DD"
-    ws_config["B9"].number_format = "YYYY-MM-DD"
-    ws_config["B10"].number_format = "YYYY-MM-DD"
-    ws_config["B11"].number_format = "YYYY-MM-DD"
+    # Apply date formatting to buffer dates (B2, B3, B8, B9, B10, B11 based on current config_data)
+    ws_config["B2"].number_format = "YYYY-MM-DD"  # Planned_Start_Date
+    ws_config["B3"].number_format = "YYYY-MM-DD"  # Planned_Delivery_Date
+    ws_config["B8"].number_format = "YYYY-MM-DD"  # Green_Buffer_Date
+    ws_config["B9"].number_format = "YYYY-MM-DD"  # Yellow_Buffer_Date
+    ws_config["B10"].number_format = "YYYY-MM-DD"  # Red_Buffer_Date
+    ws_config["B11"].number_format = "YYYY-MM-DD"  # Beyond_Red_Date
 
     # --- Historic_Work_Items Sheet ---
     ws_historic = wb.create_sheet("Historic_Work_Items")
@@ -85,31 +103,13 @@ def create_test_excel_input(tmp_path):
 
     # Fixed historic data for reproducible tests
     ws_historic.append(
-        [
-            "HIST-001",
-            "Sample 1",
-            date(2024, 1, 1),
-            date(2024, 1, 5),
-            "=INT(D2)-INT(C2)+1",
-        ]
+        ["HIST-001", "Sample 1", date(2024, 1, 1), date(2024, 1, 5), 4]
     )  # 4 days
     ws_historic.append(
-        [
-            "HIST-002",
-            "Sample 2",
-            date(2024, 1, 10),
-            date(2024, 1, 17),
-            "=INT(D3)-INT(C3)+1",
-        ]
+        ["HIST-002", "Sample 2", date(2024, 1, 10), date(2024, 1, 17), 7]
     )  # 7 days
     ws_historic.append(
-        [
-            "HIST-003",
-            "Sample 3",
-            date(2024, 2, 1),
-            date(2024, 2, 3),
-            "=INT(D4)-INT(C4)+1",
-        ]
+        ["HIST-003", "Sample 3", date(2024, 2, 1), date(2024, 2, 3), 2]
     )  # 2 days
 
     # --- Current_Work_Items Sheet ---

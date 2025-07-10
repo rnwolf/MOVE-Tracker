@@ -187,13 +187,19 @@ The script will modify the *same* Excel workbook provided via `--excel-path`.
 5.  **Generate `Progress_Log` Data:**
 
       * Implement `_generate_full_progress_log` function. This function will generate the historical `Progress_Log` from `Planned_Start_Date` up to the CLI `--snapshot-date`.
-      * It will iterate through dates from `Planned_Start_Date` up to the `--snapshot-date`, typically in increments of 1 day, or a frequency that captures all relevant changes (e.g., dates of `Actual_Start_Date`, `Actual_Completion_Date`, `Date_Withdrawn` from `Current_Work_Items`, plus weekly intervals). For each `current_date_in_loop` in this range:
-          * **`Scope_At_Snapshot` calculation:** Count `Current_Work_Items` where `Actual_Start_Date` \<= `current_date_in_loop` AND (`Date_Withdrawn` is NULL or `Date_Withdrawn` \> `current_date_in_loop`).
-          * `Actual_Work_Completed` calculation: Count `Current_Work_Items` where `Status` is "Completed" AND `Actual_Completion_Date` \<= `current_date_in_loop`.
+      * It will progress through dates from `Planned_Start_Date` up to the `--snapshot-date`, on those dates when there are changes to work items (e.g., dates of `Commitment_Date`, `Actual_Start_Date`, `Actual_Completion_Date`, `Date_Withdrawn` related to the work-items on the sheet `Current_Work_Items`).
+      * For each of the dates above, upto and equal to the `--snapshot-date` calculate the following:
+          * **`Scope_At_Snapshot` calculation:**
+              Excel formular for `Scope_At_Snapshot` date:
+              `Scope_At_Snapshot = SUMPRODUCT(  --(tblWorkItems[Commitment_Date] <= Snapshot\_Date),
+                      --((tblWorkItems[Date_Withdrawn] > Snapshot\_Date) + ISBLANK(tblWorkItems[Date_Withdrawn])) )`
+              In summary, for the scope we need to count the work items that have been committed to and exclude those that we now know are withdrawn as at the given Snapshot date.
+.
+          * `Actual_Work_Completed` calculation: Count `Current_Work_Items` where `Status` is "Completed" AND `Actual_Completion_Date` \<= `current_date_in_loop` and `Date_Withdrawn` is NULL or `Date_Withdrawn` \> `current_date_in_loop`.
           * `Current_50th_Percentile_Flow_Time` calculation:
               * Filter `Current_Work_Items` for items `Completed` by `current_date_in_loop` that started on or before `current_date_in_loop`.
               * Calculate flow time for these items.
-              * Compute the 50th percentile. If less than 2 completed items, fall back to `Historic_50th_Percentile_Flow_Time` or a reasonable default (e.g., 5 days).
+              * Compute the 50th percentile. If less than 2 completed items, fall back to `Historic_50th_Percentile_Flow_Time`.
           * All other calculations (Elapsed\_Time\_Days, Actual\_Operational\_Throughput, Forecasted\_Delivery\_Date, Buffer\_Consumption\_Percentage, Work\_Done\_Percentage, Current\_Buffer\_Signal) will use `current_date_in_loop` as the reference point and the dynamically calculated `Scope_At_Snapshot`.
       * The function will return a DataFrame containing all generated log entries, sorted by `Snapshot_Date`.
 

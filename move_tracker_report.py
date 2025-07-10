@@ -27,6 +27,8 @@ from openpyxl.drawing.image import Image
 from openpyxl.worksheet.worksheet import Worksheet
 from dateutil.relativedelta import relativedelta
 import pandas as pd
+import numpy as np
+from matplotlib import pyplot as plt
 
 # ==============================================================================
 # Data Structures
@@ -110,7 +112,7 @@ def _create_excel_template(excel_path: str, overwrite: bool):
         from datetime import timedelta
 
         planned_delivery_date = (
-            planned_start_date + relativedelta(months=+3) - timedelta(days=1)
+            planned_start_date + relativedelta(months=+1) - timedelta(days=1)
         )
 
         # Instructions Sheet
