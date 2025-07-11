@@ -179,6 +179,7 @@ tmp_rovodev_*
 # Generated chart images (except reference images)
 *.png
 !tests/reference_images/*.png
+!/images/*.png
 
 # Excel files (except templates)
 *.xlsx
