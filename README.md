@@ -23,8 +23,7 @@ The tool helps you to create **Work Execution** and **Fever Charts**.
 
 See the book [Standing on Bits - Agile Software Engineering Management at Scale with the Theory of Constraints](https://leanpub.com/standingonbits) page 41.
 
-![alt text](<images/Standing On Bits - Page 41.png>)
-
+![Scheethot of page 41 from the workflow execution and fever chart from the book Standing on Bits ](<images/Standing On Bits - Page 41.png>)
 
 ### Work Execution Chart (Similar to a Burnup Chart)
 
@@ -32,16 +31,16 @@ See the book [Standing on Bits - Agile Software Engineering Management at Scale 
 
 ### Fever Charts (A CCPM-style chart based on the buffer and work done)
 
-CCPM = [Critical Chain Project Management]()
+CCPM = [Critical Chain Project Management](https://www.perplexity.ai/search/what-is-critical-chain-project-bEWdh44BRliy6.s0_aQCtw)
 
 What are Fever Charts?
 
-The idea come stems from the daily temperature checks made on patients in hospital. If the temperature chart is deviates from normal the nurse will call the doctor to consider further action.
+The idea come stems from the daily [temperature checks made on patients in hospital.](https://www.britishjournalofnursing.com/content/clinical/monitoring-temperature) If the temperature chart deviates from normal excesivley the nurse will call the doctor to consider further action.
 
-![image of a nurse taking patients thermometer reading and recording it in a fever chart](<images/cartoon image of a nurse taking patients thermometer reading and recording it in a fever chart.webp>){ width=200px }
+![image of a nurse taking patients thermometer reading and recording it in a fever chart](<images/cartoon image of a nurse taking patients thermometer reading and recording it in a fever chart.webp>)
 
 
-The fever chart is divided up into action zones. These colour of the current state of the buffers triggers decisions, lile a traffic light 🚦 :
+The fever chart is divided up into action zones. These colour of the state of the buffer triggers decisions, like a traffic light 🚦you have on many status reports. Except that this colour status is based on data not gut feel.
 
     - Green: Continue execution as planned.
     - Yellow: Investigate root causes, prepare mitigation.
@@ -74,8 +73,10 @@ Why Python? Spreadsheets are not able to create the detailed charts we require, 
 
 ### Using UV (Recommended)
 
-See UV [website for installations instructions.]((https://docs.astral.sh/uv/getting-started/installation/))
+See Astrals [website for UV installation instructions.](https://docs.astral.sh/uv/getting-started/installation/)
 
+
+Create a working directory in which you will store script and working spreadsheet.
 
 ```powershell
 # Make a new working directory
@@ -83,9 +84,11 @@ mkdir MOVE-Tracker
 cd MOVE-Tracker
 ```
 
-Open the Github site https://github.com/rnwolf/MOVE-Tracker Have a look at the README.
+Open the Github site https://github.com/rnwolf/MOVE-Tracker Have a look at the README. You are most probably looking at it now.
 
-Download the python script and save it as move_tracker_report.py to the directory you created above.
+Download the python script, move_tracker_report.py, and save it as move_tracker_report.py to the directory you created above.
+
+Click on the link below here to open is up in raw text format.
 
 https://raw.githubusercontent.com/rnwolf/MOVE-Tracker/refs/heads/master/move_tracker_report.py
 
@@ -128,7 +131,7 @@ In order to forecast future performance, we assume that it will be similar to pa
 Add the MOVE work items.  The commitment date should be specified which is likey to be the same date as the MOVE start date.
 We also cater for the case were items are removed from the scope. Please do not delete the work-item row, rather update the withdrawn date for the work item.
 
-[Add current work items into excel](images)Add current work items into excel](<images/Screenshot 2025-07-11 Current work items.png>)
+![Add your current MOVE work items into excel](<images/Screenshot 2025-07-11 Current work items.png>)
 
 
 ### 5. Check the MOVE configuration
@@ -181,6 +184,9 @@ uv run move_tracker_report.py --create-template --excel-path "NewProject.xlsx"
 ```
 
 **Generate full report:**
+
+Obviously you need to use a snapshot date that is relevant for your project.
+
 ```bash
 uv run move_tracker_report.py --excel-path "Project.xlsx" --snapshot-date "2025-01-15" --log-level INFO
 ```
